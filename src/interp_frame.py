@@ -14,6 +14,7 @@ def flow_to_color(flow, hsv):
     return cv.cvtColor(hsv, cv.COLOR_HSV2BGR) # Converts HSV to RGB (BGR) color representation
 
 def forward_warping(src, dst, t, flow):
+    # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.put_
     # prev_frame[y, x] == curr_frame[y + flow[y, x, 1], x + flow[y, x, 0]]
     h, w, ch = src.shape
     mid_frame = np.zeros_like(src)
@@ -29,8 +30,9 @@ def forward_warping(src, dst, t, flow):
     dst_cood[0] = np.clip(dst_cood[0], 0, h-1)
     dst_cood[1] = np.clip(dst_cood[1], 0, w-1)
     mid_frame[dst_cood[0], dst_cood[1]] = src[src_cood[0], src_cood[1]]
+    occlution_mask = (mid_frame > 0).astype(np.float32)
+    return mid_frame, occlution_mask
 
-    return mid_frame
 def optical_flow(img0, img1):
     gray0 = cv.cvtColor(img0, cv.COLOR_BGR2GRAY) # Converts frame to grayscale because we only need the luminance channel for detecting edges - less computationally expensive
     gray1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY) 
@@ -43,15 +45,25 @@ def optical_flow(img0, img1):
     # gray0 = gray1 # update previous frame
     return flow
 
-def splatting(frame0, frame1):
-    return (frame0 + frame1)
+def splatting(frame0, frame1, O_mask0, O_mask1, t):
+    Z = O_mask0*(1-t) + O_mask1*t
+    frame0_factor = np.true_divide(O_mask0*(1-t), Z)
+    return (frame0*frame0_factor + frame1*(1-frame0_factor))
+
+# def occlution(flow, t):
+#     h, w, ch = flow.shape
+#     one_map = np.ones((h, w, 1))
+#     occlusion = forward_warping(one_map, one_map, t, flow) > 0
+#     occlusion = np.logical_not(occlusion).astype(np.float32)
+#     return occlusion
+
+
 def interp_frame(img0, img1, t):
     flow0_1 = optical_flow(img0, img1)
-    mid_frame0_1 = forward_warping(img0, img1, t, flow0_1)
-    flow1_0 = optical_flow(img0, img1)
-    mid_frame1_0 = forward_warping(img0, img1, 1-t, flow1_0)
-    # mid_frame = splatting(mid_frame0_1, mid_frame1_0)
-    mid_frame = mid_frame0_1
+    mid_frame0_1, occlution_mask0 = forward_warping(img0, img1, t, flow0_1)
+    flow1_0 = optical_flow(img1, img0)
+    mid_frame1_0, occlution_mask1 = forward_warping(img1, img0, 1-t, flow1_0)
+    mid_frame = splatting(mid_frame0_1, mid_frame1_0, occlution_mask0, occlution_mask1, t)
 
     return mid_frame
 
