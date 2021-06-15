@@ -58,14 +58,52 @@ def splatting(frame0, frame1, O_mask0, O_mask1, t):
 #     return occlusion
 
 
-def interp_frame(img0, img1, t):
-    flow0_1 = optical_flow(img0, img1)
-    mid_frame0_1, occlution_mask0 = forward_warping(img0, img1, t, flow0_1)
-    flow1_0 = optical_flow(img1, img0)
-    mid_frame1_0, occlution_mask1 = forward_warping(img1, img0, 1-t, flow1_0)
-    mid_frame = splatting(mid_frame0_1, mid_frame1_0, occlution_mask0, occlution_mask1, t)
+def interp_frame(img0, img1, mode):
+    if (mode == '1'):
+        flow0_1 = optical_flow(img0, img1)
+        mid_frame0_1, occlution_mask0 = forward_warping(img0, img1, 0.5, flow0_1)
+        flow1_0 = optical_flow(img1, img0)
+        mid_frame1_0, occlution_mask1 = forward_warping(img1, img0, 0.5, flow1_0)
+        mid_frame = splatting(mid_frame0_1, mid_frame1_0, occlution_mask0, occlution_mask1, 0.5)
+        return mid_frame
 
-    return mid_frame
+    elif (mode == '2'):
+        frames = []
+        flow0_1 = optical_flow(img0, img1)        
+        flow1_0 = optical_flow(img1, img0)
+        for i in range(1, 8):
+            frame0_1, occlution_mask0 = forward_warping(img0, img1, i*0.125, flow0_1)
+            frame1_0, occlution_mask1 = forward_warping(img1, img0, 1 - i*0.125, flow1_0)
+            frame = splatting(frame0_1, frame1_0, occlution_mask0, occlution_mask1, i*0.125)
+            frames.append(frame)
+        return frames
+    elif (mode == '3odd'):
+        flow0_1 = optical_flow(img0, img1)        
+        flow1_0 = optical_flow(img1, img0)
+        frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.2, flow0_1)
+        frame1_0_a, occlution_mask1_a = forward_warping(img1, img0, 0.8, flow1_0)
+        frame_02 = splatting(frame0_1_a, frame1_0_a, occlution_mask0_a, occlution_mask1_a, 0.2)
+
+        frame0_1_b, occlution_mask0_b = forward_warping(img0, img1, 0.6, flow0_1)
+        frame1_0_b, occlution_mask1_b = forward_warping(img1, img0, 0.4, flow1_0)
+        frame_06 = splatting(frame0_1_b, frame1_0_b, occlution_mask0_b, occlution_mask1_b, 0.6)
+
+        return frame_02, frame_06
+
+    elif (mode == '3even'):
+        flow0_1 = optical_flow(img0, img1)        
+        flow1_0 = optical_flow(img1, img0)
+        frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.4, flow0_1)
+        frame1_0_a, occlution_mask1_a = forward_warping(img1, img0, 0.6, flow1_0)
+        frame_04 = splatting(frame0_1_a, frame1_0_a, occlution_mask0_a, occlution_mask1_a, 0.4)
+
+        frame0_1_b, occlution_mask0_b = forward_warping(img0, img1, 0.8, flow0_1)
+        frame1_0_b, occlution_mask1_b = forward_warping(img1, img0, 0.2, flow1_0)
+        frame_08 = splatting(frame0_1_b, frame1_0_b, occlution_mask0_b, occlution_mask1_b, 0.8)
+
+        return frame_04, frame_08
+
+
 
 
     
