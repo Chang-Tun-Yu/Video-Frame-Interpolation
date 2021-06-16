@@ -35,10 +35,10 @@ if __name__ == '__main__':
             if not os.path.exists('../output/0_center_frame/'+sq+'/'):
                 os.makedirs('../output/0_center_frame/'+sq+'/')
             # write output
-            cv2.imwrite('../output/0_center_frame/'+sq+'/frame10i11.png', It)
+            cv2.imwrite('../output/0_center_frame/'+sq+'/frame10i11.jpg', It)
 
             # evaluate
-            out = cv2.imread('../output/0_center_frame/'+sq+'/frame10i11.png')
+            out = cv2.imread('../output/0_center_frame/'+sq+'/frame10i11.jpg')
             gt = cv2.imread('../data/validation/0_center_frame/'+sq+'/GT/frame10i11.png')
             psnr_score = psnr(gt, out)
             ssim_score = ssim(gt, out)
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     elif (sys.argv[1] == "3"):
         sequences = ['0', '1', '2']
         for sq in sequences:
-            for i in range(7):
+            for i in range(8):
                 I0 = cv2.imread('../data/validation/2_24fps_to_60fps/'+sq+'/{}/input/000{:0>2d}.jpg'.format(i, i*10))
                 I1 = cv2.imread('../data/validation/2_24fps_to_60fps/'+sq+'/{}/input/000{:0>2d}.jpg'.format(i, (i+1)*10))
                 if not os.path.exists('../output/2_24fps_to_60fps/'+sq+'/{}/'.format(i)):
