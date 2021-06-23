@@ -21,9 +21,9 @@ if __name__ == '__main__':
     from interp_frame import interp_frame
     import sys
     if (len(sys.argv) != 2):
-        print("usage: python test.py <mode>,", "<mode>: 1 or 2 or 3")
+        print("usage: python test.py <mode>,", "<mode>: 0 or 1 or 2")
         sys.exit()
-    if (sys.argv[1] == '1'):
+    if (sys.argv[1] == '0'):
         """ 0_center_frame """
         sequences = ['7', '8', '9', '10', '11', '12', '13', '14', '15', '16']
         for sq in sequences:
@@ -37,7 +37,7 @@ if __name__ == '__main__':
             # write test_output
             cv2.imwrite('../test_output/0_center_frame/'+sq+'/frame10i11.jpg', It)
 
-    elif (sys.argv[1] == '2'):
+    elif (sys.argv[1] == '1'):
         sequences = ['3', '4']
         for sq in sequences:
             for i in range(12):            
@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 for j in range(1, 8):
                     cv2.imwrite('../test_output/1_30fps_to_240fps/'+sq+'/{}/000{:0>2d}.jpg'.format(i, i*8+j), Its[j-1])
                 
-    elif (sys.argv[1] == "3"):
+    elif (sys.argv[1] == "2"):
         sequences = ['3', '4']
         for sq in sequences:
             for i in range(8):

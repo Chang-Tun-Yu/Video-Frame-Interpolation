@@ -59,17 +59,17 @@ def optical_flow(img0, img1):
     hsv = np.zeros_like(img0) #zero intensities with same type as img0 (388, 584, 3) 
     hsv[:,:,1] = 255 # Sets image saturation to maximum 
     
-    flow = cv.calcOpticalFlowFarneback(gray0, gray1, None, 0.5, 3, 15, 3, 5, 1.2, 0) # (384, 584, 2) dense optical flow for all pixels
+    flow = cv.calcOpticalFlowFarneback(gray0, gray1, None, 0.5, 3, 30, 3, 5, 1.1, 0) # (384, 584, 2) dense optical flow for all pixels
     # rgb_flow = flow_to_color(flow, hsv) # show flow image, nothing to do with interpolated frame
     # write_images(img0, img1, rgb_flow)
     # gray0 = gray1 # update previous frame
     return flow
 
 def splatting(frame0, frame1, O_mask0, O_mask1, t):
-    # Z = O_mask0*(1-t) + O_mask1*t
-    # frame0_factor = np.true_divide(O_mask0*(1-t), Z)
-    # return (frame0*frame0_factor + frame1*(1-frame0_factor))
-    return frame0
+    Z = O_mask0*(1-t) + O_mask1*t
+    frame0_factor = np.true_divide(O_mask0*(1-t), Z)
+    return (frame0*frame0_factor + frame1*(1-frame0_factor))
+    # return frame0
 
 # def occlution(flow, t):
 #     h, w, ch = flow.shape
@@ -80,7 +80,7 @@ def splatting(frame0, frame1, O_mask0, O_mask1, t):
 
 
 def interp_frame(img0, img1, mode):
-    if (mode == '1'):
+    if (mode == '0'):
         flow0_1 = optical_flow(img0, img1)
         mid_frame0_1, occlution_mask0 = forward_warping(img0, img1, 0.5, flow0_1)
         flow1_0 = optical_flow(img1, img0)
@@ -99,7 +99,7 @@ def interp_frame(img0, img1, mode):
 
         return mid_frame
 
-    elif (mode == '2'):
+    elif (mode == '1'):
         frames = []
         flow0_1 = optical_flow(img0, img1)        
         flow1_0 = optical_flow(img1, img0)
@@ -123,7 +123,7 @@ def interp_frame(img0, img1, mode):
                 frame = backward_warping(img1, img0, flowt_1)
             frames.append(frame)
         return frames
-    elif (mode == '3odd'):
+    elif (mode == '2odd'):
         flow0_1 = optical_flow(img0, img1)        
         flow1_0 = optical_flow(img1, img0)
         # frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.2, flow0_1)
@@ -143,7 +143,7 @@ def interp_frame(img0, img1, mode):
 
         return frame_02, frame_06
 
-    elif (mode == '3even'):
+    elif (mode == '2even'):
         flow0_1 = optical_flow(img0, img1)        
         flow1_0 = optical_flow(img1, img0)
         # frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.4, flow0_1)

@@ -20,10 +20,12 @@ def ssim(img1, img2):
 if __name__ == '__main__':
     from interp_frame import interp_frame
     import sys
+    psnrs = []
+    ssims = []
     if (len(sys.argv) != 2):
-        print("usage: python eval.py <mode>,", "<mode>: 1 or 2 or 3")
+        print("usage: python eval.py <mode>,", "<mode>: 0 or 1 or 2")
         sys.exit()
-    if (sys.argv[1] == '1'):
+    if (sys.argv[1] == '0'):
         """ 0_center_frame """
         sequences = ['0', '1', '2', '3', '4', '5', '6']
         for sq in sequences:
@@ -43,7 +45,10 @@ if __name__ == '__main__':
             psnr_score = psnr(gt, out)
             ssim_score = ssim(gt, out)
             print(sq, psnr_score, ssim_score)
-    elif (sys.argv[1] == '2'):
+            psnrs.append(psnr_score)
+            ssims.append(ssim_score)
+        print("Final Score: PSNR", sum(psnrs)/len(psnrs), "SSIM" , sum(ssims)/len(ssims))
+    elif (sys.argv[1] == '1'):
         sequences = ['0', '1', '2']
         for sq in sequences:
             for i in range(12):            
@@ -62,8 +67,11 @@ if __name__ == '__main__':
                     gt = cv2.imread('../data/validation/1_30fps_to_240fps/'+sq+'/{}/GT/000{:0>2d}.jpg'.format(i, i*8+j))
                     psnr_score = psnr(gt, out)
                     ssim_score = ssim(gt, out)
+                    psnrs.append(psnr_score)
+                    ssims.append(ssim_score)
                     print(sq, i*8+j, psnr_score, ssim_score)
-    elif (sys.argv[1] == "3"):
+        print("Final Score: PSNR", sum(psnrs)/len(psnrs), "SSIM" , sum(ssims)/len(ssims))
+    elif (sys.argv[1] == "2"):
         sequences = ['0', '1', '2']
         for sq in sequences:
             for i in range(8):
@@ -81,9 +89,13 @@ if __name__ == '__main__':
                     o06 = cv2.imread('../output/2_24fps_to_60fps/'+sq+'/{}/000{:0>2d}.jpg'.format(i, i*10+6))
                     psnr_score = psnr(gt02, o02)
                     ssim_score = ssim(gt02, o02)
+                    psnrs.append(psnr_score)
+                    ssims.append(ssim_score)
                     print(sq, i*10+2, psnr_score, ssim_score)
                     psnr_score = psnr(gt06, o06)
                     ssim_score = ssim(gt06, o06)
+                    psnrs.append(psnr_score)
+                    ssims.append(ssim_score)
                     print(sq, i*10+6, psnr_score, ssim_score)
                 else:
                     It04, It08 = interp_frame(I0, I1, sys.argv[1]+'even')
@@ -95,11 +107,15 @@ if __name__ == '__main__':
                     o08 = cv2.imread('../output/2_24fps_to_60fps/'+sq+'/{}/000{:0>2d}.jpg'.format(i, i*10+8))
                     psnr_score = psnr(gt04, o04)
                     ssim_score = ssim(gt04, o04)
+                    psnrs.append(psnr_score)
+                    ssims.append(ssim_score)
                     print(sq, i*10+4, psnr_score, ssim_score)
                     psnr_score = psnr(gt08, o08)
                     ssim_score = ssim(gt08, o08)
+                    psnrs.append(psnr_score)
+                    ssims.append(ssim_score)
                     print(sq, i*10+8, psnr_score, ssim_score)
-
+        print("Final Score: PSNR", sum(psnrs)/len(psnrs), "SSIM" , sum(ssims)/len(ssims))
                     
     else:
         print("mode is wrong")
