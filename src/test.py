@@ -21,7 +21,7 @@ if __name__ == '__main__':
     from interp_frame import interp_frame
     import sys
     if (len(sys.argv) != 2):
-        print("usage: python eval.py <mode>,", "<mode>: 1 or 2 or 3")
+        print("usage: python test.py <mode>,", "<mode>: 1 or 2 or 3")
         sys.exit()
     if (sys.argv[1] == '1'):
         """ 0_center_frame """

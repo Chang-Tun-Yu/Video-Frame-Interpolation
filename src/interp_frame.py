@@ -33,6 +33,26 @@ def forward_warping(src, dst, t, flow):
     occlution_mask = (mid_frame > 0).astype(np.float32)
     return mid_frame, occlution_mask
 
+def backward_warping(src, dst, flow):
+    # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.put_
+    # prev_frame[y, x] == curr_frame[y + flow[y, x, 1], x + flow[y, x, 0]]
+    h, w, ch = src.shape
+    mid_frame = np.zeros_like(src)
+    x_dst = np.arange(w)
+    y_dst = np.arange(h)
+    xp_dst, yp_dst = np.meshgrid(x_dst,y_dst)
+    dst_cood = np.vstack(list(map(np.ravel, [yp_dst, xp_dst]))) # image is (row, column) indexing
+
+    flow_vectors = flow.ravel().reshape(-1, 2).T
+    flow_vectors[[0,1]] = flow_vectors[[1,0]] # flow is (x,y) coordinate-based, which is (column, row) indexing
+
+    src_cood = (np.round(dst_cood + flow_vectors)).astype(int) # (2, 226592)
+    src_cood[0] = np.clip(src_cood[0], 0, h-1)
+    src_cood[1] = np.clip(src_cood[1], 0, w-1)
+    mid_frame[dst_cood[0], dst_cood[1]] = src[src_cood[0], src_cood[1]]
+    return mid_frame
+
+
 def optical_flow(img0, img1):
     gray0 = cv.cvtColor(img0, cv.COLOR_BGR2GRAY) # Converts frame to grayscale because we only need the luminance channel for detecting edges - less computationally expensive
     gray1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY) 
@@ -46,9 +66,10 @@ def optical_flow(img0, img1):
     return flow
 
 def splatting(frame0, frame1, O_mask0, O_mask1, t):
-    Z = O_mask0*(1-t) + O_mask1*t
-    frame0_factor = np.true_divide(O_mask0*(1-t), Z)
-    return (frame0*frame0_factor + frame1*(1-frame0_factor))
+    # Z = O_mask0*(1-t) + O_mask1*t
+    # frame0_factor = np.true_divide(O_mask0*(1-t), Z)
+    # return (frame0*frame0_factor + frame1*(1-frame0_factor))
+    return frame0
 
 # def occlution(flow, t):
 #     h, w, ch = flow.shape
@@ -65,6 +86,17 @@ def interp_frame(img0, img1, mode):
         flow1_0 = optical_flow(img1, img0)
         mid_frame1_0, occlution_mask1 = forward_warping(img1, img0, 0.5, flow1_0)
         mid_frame = splatting(mid_frame0_1, mid_frame1_0, occlution_mask0, occlution_mask1, 0.5)
+
+        # backward
+        # t = 0.5
+        # flow0_1 = optical_flow(img0, img1)
+        # flow1_0 = optical_flow(img1, img0)
+        # flowt_0 = (t-1)*t*flow0_1 + (t**2)*flow1_0
+        # flowt_1 = ((t-1)**2)*flow0_1 + t*(t-1)*flow1_0
+        # mid_frame0_1 = backward_warping(img0, img1, flowt_0)
+        # mid_frame1_0 = backward_warping(img1, img0, flowt_1)
+        # mid_frame = splatting(mid_frame0_1,mid_frame1_0, -1,-1,0.5)
+
         return mid_frame
 
     elif (mode == '2'):
@@ -72,35 +104,62 @@ def interp_frame(img0, img1, mode):
         flow0_1 = optical_flow(img0, img1)        
         flow1_0 = optical_flow(img1, img0)
         for i in range(1, 8):
-            frame0_1, occlution_mask0 = forward_warping(img0, img1, i*0.125, flow0_1)
-            frame1_0, occlution_mask1 = forward_warping(img1, img0, 1 - i*0.125, flow1_0)
-            frame = splatting(frame0_1, frame1_0, occlution_mask0, occlution_mask1, i*0.125)
+            # if (i < 5):
+            #     frames.append(img0)
+            # else:
+            #     frames.append(img1)
+            
+            # frame0_1, occlution_mask0 = forward_warping(img0, img1, i*0.125, flow0_1)
+            # frame1_0, occlution_mask1 = forward_warping(img1, img0, 1 - i*0.125, flow1_0)
+            # frame = splatting(frame0_1, frame1_0, occlution_mask0, occlution_mask1, i*0.125)
+            # frames.append(frame)
+
+            t = i*0.125
+            if (i < 5):
+                flowt_0 = (t-1)*t*flow0_1 + (t**2)*flow1_0
+                frame = backward_warping(img0, img1, flowt_0)
+            else:
+                flowt_1 = ((t-1)**2)*flow0_1 + t*(t-1)*flow1_0
+                frame = backward_warping(img1, img0, flowt_1)
             frames.append(frame)
         return frames
     elif (mode == '3odd'):
         flow0_1 = optical_flow(img0, img1)        
         flow1_0 = optical_flow(img1, img0)
-        frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.2, flow0_1)
-        frame1_0_a, occlution_mask1_a = forward_warping(img1, img0, 0.8, flow1_0)
-        frame_02 = splatting(frame0_1_a, frame1_0_a, occlution_mask0_a, occlution_mask1_a, 0.2)
+        # frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.2, flow0_1)
+        # frame1_0_a, occlution_mask1_a = forward_warping(img1, img0, 0.8, flow1_0)
+        # frame_02 = splatting(frame0_1_a, frame1_0_a, occlution_mask0_a, occlution_mask1_a, 0.2)
 
-        frame0_1_b, occlution_mask0_b = forward_warping(img0, img1, 0.6, flow0_1)
-        frame1_0_b, occlution_mask1_b = forward_warping(img1, img0, 0.4, flow1_0)
-        frame_06 = splatting(frame0_1_b, frame1_0_b, occlution_mask0_b, occlution_mask1_b, 0.6)
+        # frame0_1_b, occlution_mask0_b = forward_warping(img0, img1, 0.6, flow0_1)
+        # frame1_0_b, occlution_mask1_b = forward_warping(img1, img0, 0.4, flow1_0)
+        # frame_06 = splatting(frame0_1_b, frame1_0_b, occlution_mask0_b, occlution_mask1_b, 0.6)
+
+        t = 0.2
+        flowt_0 = (t-1)*t*flow0_1 + (t**2)*flow1_0
+        frame_02 = backward_warping(img0, img1, flowt_0)
+        t = 0.6
+        flowt_1 = ((t-1)**2)*flow0_1 + t*(t-1)*flow1_0
+        frame_06 = backward_warping(img1, img0, flowt_1)   
 
         return frame_02, frame_06
 
     elif (mode == '3even'):
         flow0_1 = optical_flow(img0, img1)        
         flow1_0 = optical_flow(img1, img0)
-        frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.4, flow0_1)
-        frame1_0_a, occlution_mask1_a = forward_warping(img1, img0, 0.6, flow1_0)
-        frame_04 = splatting(frame0_1_a, frame1_0_a, occlution_mask0_a, occlution_mask1_a, 0.4)
+        # frame0_1_a, occlution_mask0_a = forward_warping(img0, img1, 0.4, flow0_1)
+        # frame1_0_a, occlution_mask1_a = forward_warping(img1, img0, 0.6, flow1_0)
+        # frame_04 = splatting(frame0_1_a, frame1_0_a, occlution_mask0_a, occlution_mask1_a, 0.4)
 
-        frame0_1_b, occlution_mask0_b = forward_warping(img0, img1, 0.8, flow0_1)
-        frame1_0_b, occlution_mask1_b = forward_warping(img1, img0, 0.2, flow1_0)
-        frame_08 = splatting(frame0_1_b, frame1_0_b, occlution_mask0_b, occlution_mask1_b, 0.8)
+        # frame0_1_b, occlution_mask0_b = forward_warping(img0, img1, 0.8, flow0_1)
+        # frame1_0_b, occlution_mask1_b = forward_warping(img1, img0, 0.2, flow1_0)
+        # frame_08 = splatting(frame0_1_b, frame1_0_b, occlution_mask0_b, occlution_mask1_b, 0.8)
 
+        t = 0.4
+        flowt_0 = (t-1)*t*flow0_1 + (t**2)*flow1_0
+        frame_04 = backward_warping(img0, img1, flowt_0)
+        t = 0.8
+        flowt_1 = ((t-1)**2)*flow0_1 + t*(t-1)*flow1_0
+        frame_08 = backward_warping(img1, img0, flowt_1) 
         return frame_04, frame_08
 
 
